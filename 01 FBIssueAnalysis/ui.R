@@ -93,8 +93,6 @@ shinyUI(
             tabPanel("分數分配", value = "FeatIssue2", plotlyOutput("CluFreq")),
             tabPanel("所有同溫層", value = "FeatIssue3", plotOutput("AllCluFreq")),
             tabPanel("所有同溫層（去除Cluster 2）", value = "FeatIssue4", plotOutput("CluFreqno2"))
-            #tabPanel("Summary", verbatimTextOutput("summary")), 
-            #tabPanel("Table", tableOutput("table"))
           )
                )
               )
@@ -133,8 +131,6 @@ shinyUI(
                                     plotOutput("MedPlot")),
                            tabPanel("有機食物",
                                     plotOutput("OrgPlot"))
-                           #tabPanel("Summary", verbatimTextOutput("summary")), 
-                           #tabPanel("Table", tableOutput("table"))
                )
              )
     )
