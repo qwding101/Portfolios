@@ -1,5 +1,5 @@
 library(ggplot2); library(shiny); library(dplyr); library(plotly); library(DT); library(shinythemes)
-# 資料讀取一般是獨立在 shinyServer()函式之外
+
 load("CA_shiny-2.RData")
 pd <- position_dodge(0.1)
 # Text size
@@ -165,9 +165,8 @@ shinyServer(function(input, output) {
               axis.text.x  = element_text(size=axistext),
               axis.text.y  = element_text(size=axistext))
       ggplotly()
-    }
-    
-  }#, height = 250, width = 700
+    }  
+  }
   )
   
   output$CA3D_S<- renderPlotly({
@@ -188,16 +187,6 @@ shinyServer(function(input, output) {
           yaxis = list(title = "統一"), 
           zaxis = list(title = "恐同")))
   })
-  
-  # output$CA3D_T<- renderPlotly({
-  #   plot_ly(df_no2, x = ~P_total, y = ~T_total, z = ~G_total,
-  #           color = ~cluster_chi)%>%
-  #     layout(#title = "立場加總",
-  #            scene = list(
-  #              xaxis = list(title = "死刑存廢"), 
-  #              yaxis = list(title = "臺灣統獨"), 
-  #              zaxis = list(title = "同婚與否")))
-  # })
   
   output$CA3Dsidertext <- renderUI({
     if (input$CA3D == "3DS"|| input$CA3D == "3DO"|| input$CA3D == "3DSOF"){
