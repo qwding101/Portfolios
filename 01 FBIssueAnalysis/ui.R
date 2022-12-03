@@ -1,7 +1,7 @@
 library(shiny); library(shinythemes); library(plotly); library(DT)
 shinyUI(
-  navbarPage(theme = shinytheme("simplex"), # 採用的模板
-  "DSR Project", # 標題
+  navbarPage(theme = shinytheme("simplex"),  # Theme setting
+  "DSR Project", # Title
   
   tabPanel("Abstract",
     h1("Facebook同溫層初探", align = "center"),
@@ -158,20 +158,7 @@ shinyUI(
                )
              )
     )
-  )#, 
-  #tabPanel("Team",
-  #         h1("國立臺灣大學", align = "center"), h2("R與資料科學導論", align = "center"),
-  #         h3("第八組", align = "center")#,
-            # withTags(
-            #   table(tr(td("心理四"),td("B02207004"),td("　莊昀軒"), align = "center"),
-            #         tr(td("心理四"),td("B02207030"),td("　林庭羽"), align = "center"),
-            #         tr(td("心理四"),td("B02207069"),td("　丁麒文"), align = "center"),
-            #         tr(td("歷史四"),td("B02203057"),td("　簡韻真"), align = "center"),
-            #         tr(td("經濟碩二"),td("R04323033"),td("　尤筱筑"), align = "center"),
-            #         tr(td("經濟碩二"),td("R04323017"),td("　黃詩媛"), align = "center"),
-            #         align = "center",style = "font-size: 14pt")
-            # )
-   #       )
+  )
   
 )
 )
