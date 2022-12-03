@@ -43,26 +43,6 @@ shinyUI(
              h1("k-means Clustering"),
              p("以下分析皆已排除Cluster 2 (無外顯意見)之資料。"),
              sidebarLayout(
-               # sidebarPanel(
-               # 
-               #   conditionalPanel(condition = "input.CA3D == '支持：同婚、臺獨、廢死'||input.CA3D == '支持：恐同、統一、挺死'",
-               #        htmlOutput("CA3Dsidertext")
-               #                  ),
-               #   conditionalPanel(condition = "input.CA3D == '立場加總'",
-               #        htmlOutput("CA3Dsidertext"),
-               #        hr(),
-               #        radioButtons("dimchange", label = "您想自由調整哪一種圖的維度？", 
-               #                           c("支持","立場加總"), selected = "立場加總", inline = T),
-               #        uiOutput("dimchoice")
-               #                  ),
-                 # conditionalPanel(condition = "input.CA3D == '支持：自由繪製'",
-                 #      htmlOutput("CA3Dsidertext"),
-                 #      hr(),
-                 #      radioButtons("dimchange", label = "您想自由調整哪一種圖的維度？", 
-                 #                         c("支持","立場加總"), selected = "支持", inline = T),
-                 #      uiOutput("dimchoice")
-                 #                 )
-                 #            ),
                sidebarPanel(
                  htmlOutput("CA3Dsidertext"),
                  shiny::hr(),
