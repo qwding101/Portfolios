@@ -25,9 +25,6 @@ colnames(df)[6] = "q1to8Mean_D1"
 
 # Profile of each participants (after within-person standardization)
 
-  * 6 dimensions parallel coordinates plot 
-
-
 ```{r}
 require(reshape2)
 require(GGally)
