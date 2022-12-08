@@ -1,4 +1,4 @@
-# R coding demo
+# Projects & Portfolios
 This repository consists of some materials (R code, papers, slides) for several projects I worked on. Note that it's for illustration purpose so the complete code and data are not uploaded here.
 
 1. Online visualization for Taiwan Facebook data [[slide](https://github.com/qwding101/R-coding-demo/blob/main/01%20FBIssueAnalysis/2016FBissueAnalysis.pdf), [Shiny website](https://rayrdemo.shinyapps.io/DSRshiny_upload/)]
