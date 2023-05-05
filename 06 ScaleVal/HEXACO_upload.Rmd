@@ -1,0 +1,1489 @@
+---
+title: "Psychometric properties validation of HEXACO model in Taiwan sample"
+output:
+  html_document:
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_float: yes
+  date: "2017/05/03"
+  author: "Ray Ding"
+  html_notebook: default
+  word_document: default
+always_allow_html: yes
+---
+
+# Data Processing & EDA
+
+## Import and join dataset
+* 把人口變項的資料與題目的資料合併後共有521位研究參與者。
+* 扣除出生年月日亂填答者，共剩519位。
+```{r, message=FALSE,warning=FALSE}
+library(dplyr)
+item = read.csv("user_personality.csv")
+demo = read.csv("user_demographics.csv")
+rawdf = inner_join(demo, item, by = "id")
+rawdf = rawdf[,-c(2, 3, 12)]
+
+factor_cols = c("gender", "marr", "location", "edu", "industry", "occupation", "income")
+rawdf[factor_cols] = lapply(rawdf[factor_cols], factor)
+
+# Drop 2 sample due to their bday = 2016 or 2017 (too young!!)
+rawdf = subset(rawdf, rawdf$bday != "2016-09-15"&rawdf$bday != "2017-01-18")
+
+# Create "age" variable (reference year = 2017 or 106)
+rawdf$age = as.integer(substr(rawdf$bday, 1, 4))
+rawdf$age = ifelse(rawdf$age < 100, 106 - rawdf$age, 2017 - rawdf$age)
+
+# Change the col order of rawdf
+library(data.table)
+setcolorder(rawdf, c("id","age", colnames(rawdf)[-c(1, 70)]))
+
+# Delete "item" in colnames
+colnames(rawdf) = c(colnames(rawdf)[1:10], as.character(1:60))
+```
+
+## Item information: dimension, reverse items and statements
+[Reference](http://hexaco.org/downloads/ScoringKeys_60.pdf)
+```{r}
+re_item = c(-1,1,1,1,1,1,1,1,-1,-1, 1,-1,1,-1,-1,1,1,1,-1,-1,
+            -1,1,1,-1,1,-1,1,-1,1,-1, -1,-1,1,1,-1,1,1,1,1,1,
+            -1,-1,1,-1,1,-1,1,-1,-1,1, 1,-1,-1,1,-1,-1,-1,1,-1,-1)
+maindim = rep(c("Openness to Experience","Conscientiousness","Agreeableness","Extraversion","Emotionality","Honesty-Humility"), 10)
+subdim = c(rep(c("Aesthetic Appreciation","Organization","Forgiveness","Social Self-Esteem","Fearfulness","Sincerity","Inquisitiveness","Diligence","Gentleness","Social Boldness","Anxiety","Fairness","Creativity","Perfectionism","Flexibility","Sociability","Dependence","Greed-Avoidance","Unconventionality","Prudence","Patience","Liveliness","Sentimentality","Modesty"),2), c("Creativity","Perfectionism","Gentleness","Social Self-Esteem","Fearfulness","Sincerity","Unconventionality","Prudence","Flexibility","Social Boldness","Sentimentality","Fairness"))
+statement = c("我覺得參觀美術館很無聊。",
+              "我會在事前計畫和組織要做的事，避免最後一分鐘手忙腳亂。",
+              "我很少有怨恨，即使面對那些對我很壞的人。",
+              "整體而言我對自己還算滿意。",
+              "如果我必須在惡劣氣候之下出外，我會感到害怕。",
+              "即使我相信用巴結的方式可以得到獎勵，我也不會做。",
+              "我喜歡去學習外國的歷史和政治。",
+              "我通常把自己逼得很緊，以求達到目標。",
+              "有時候其他人告訴我對別人太挑剔。",
+              "在團體討論中，我很少表達自己的意見。",
+              "我會為一些小事而有些焦躁不安。",
+              "如果我知道自己永遠不會被抓，我也想要去偷一百萬。",
+              "我喜歡從事藝術創作，例如，寫小說、寫歌、繪畫。",
+              "做事時, 我不太注意小細節。",
+              "有時候其他人認為我太頑固。",
+              "我喜愛需要主動與人互動的工作多於只需獨自一人進行的工作。",
+              "當我遭遇到痛苦的經驗時，我需要其他人的安慰。",
+              "對我來說，擁有很多金錢不是特別重要。",
+              "我認為聽取極端意見是在浪費時間。",
+              "我以當時的感受來作決定，而不會仔細思考。",
+              "別人認為我是一個很暴躁的人。",
+              "大多數日子裡, 我都感到愉快和樂觀。",
+              "看到別人哭時，我也會想哭。",
+              "我認為我比一般人有資格得到更多的尊重。",
+              "如果我有機會, 我會想去參加古典音樂會。",
+              "在工作上, 我有時候會因為沒有好的計畫而遇到困難。",
+              "面對那些對我很壞的人，我的態度是「原諒與忘記」。",
+              "我覺得自己是個不受歡迎的人。",
+              "面對可能使身體受傷的險境, 我會很害怕。",
+              "如果我想從某人手中得到一些東西, 即使那個人講的笑話再不好笑，我也會哈哈大笑。",
+              "翻閱百科全書這件事，我從沒真正喜歡過。",
+              "我只做每天應做的最少工作量。",
+              "我采寬厚的態度去評論他人。",
+              "在社交場合裡, 我通常都是那個先主動的人。",
+              "比起大多數人，我擔心的事少了很多。",
+              "即使很有價值，我也絕不會接受賄賂。",
+              "別人經常說我有很好的想像力。",
+              "即使要花很多的時間，在工作上，我還是力求精確。",
+              "當別人不同意我的時候, 我通常能讓自己的意見保持相當的彈性。",
+              "通常我到新環境做的第一件事就是交新朋友。",
+              "我可以處理困難的處境而不需要任何人的情感支援。",
+              "如果有機會可以擁有昂貴的奢侈品，我會獲得很大的快樂。",
+              "我喜歡那些對事情有獨特見解的人。",
+              "我因採取行動前沒有仔細思考而犯下很多錯誤。",
+              "大多數的人比我容易生氣。",
+              "大多數人都比平常的我要樂觀和有活力。",
+              "當親近的人要離開一段很長的時間，我會有很深的感傷。",
+              "我想讓別人知道我是個地位高的重要人物。",
+              "我不認為自己是那種有藝術天份或創意的人。",
+              "別人常說我是個完美主義者。",
+              "即使當別人犯很多的錯誤, 我也很少說難聽的話。",
+              "我有時會覺得自已一文不值。",
+              "即使在非常危急的情況, 我不會感覺到驚慌。",
+              "我不會為了讓某人幫我做事而假裝喜歡那個人。",
+              "我發覺討論哲學很乏味。",
+              "我喜歡想到什麼就做什麼，不喜歡按計劃行事。",
+              "當別人說我錯了，我第一個反應就是跟他們爭辯。",
+              "在團體中，我常是那個代表團體說話的人。",
+              "即使在大多數人變得很感傷的情境中，我仍可不動情感。",
+              "我會禁不住誘惑用偽鈔，如果我確定絕不會被抓到。")
+
+item_info = data.frame(maindim, subdim, statement, re_item)
+row.names(item_info) = colnames(rawdf)[11:70]
+```
+
+## EDA (demographics)
+```{r}
+library(psych)
+eda_demo = lapply(rawdf[factor_cols], table)
+print(eda_demo)
+describe(rawdf$age)
+```
+
+## EDA (items, before reverse scoring)
+1. Missing values
+```{r}
+table(is.na(rawdf)) # No missing value
+```
+2. Statistics
+
+* [Joanes, D. N. & Gill, C. A. (1998)](http://onlinelibrary.wiley.com/doi/10.1111/1467-9884.00122/abstract)
+* Skewness: $b_1 = \frac{m_3}{s^3}= (\frac{n-1}{n})^{\frac{3}{2}} \frac{m_3}{m_2^{3/2}}$
+* Kurtosis:$b_2 = \frac{m_4}{s^4}-3 = (\frac{n-1}{n})^2 \frac{m_4}{m_2^2}-3$
+* Where $m_r = \frac{1}{n}\sum_{i=1}^{n}{(x_i - \bar{x})^r}$ and $s^2 = \frac{1}{n-1}\sum_{i=1}^{n}{(x_i - \bar{x})^2}$.
+
+```{r,message=FALSE,warning=FALSE}
+item_stat = describe(rawdf[,11:70])
+#write.csv(round(item stat,4)[,-c(1,2,8:10,13)], "item_stat_before reversed.csv")
+```
+3. Plots
+```{r}
+dfplot <- function(data.frame){
+  df <- data.frame
+  ln <- length(names(data.frame))
+  for(i in 1:ln){
+    mname <- substitute(df[, i])
+      if(is.factor(df[, i])){
+        #png(paste("vardist_", i, ".png", sep = ""))
+        plot(df[, i], main = names(df)[i], las = 1)
+        #dev.off()
+        }
+      else if(is.character(df[, i])){
+        #png(paste("vardist_", i, ".png", sep = ""))
+        plot(as.factor(df[, i]), main = names(df)[i], las = 1)
+        #dev.off()
+        }
+      else{
+        #png(paste("vardist_", i, ".png", sep = ""))
+        hist(df[, i], main = names(df)[i], las = 1)
+        #dev.off()
+        }
+    }
+}
+par(mfrow=c(3,4),mar=c(2,1,1,1))
+dfplot(rawdf[,11:70])
+```
+
+4. Another visualization
+
+```{r, warning=FALSE, message=FALSE, fig.width=8, fig.height=10}
+library(likert)
+item_vis = rawdf[,11:70]
+
+item_vis[] = lapply(item_vis, factor, levels=1:5, 
+                    labels = c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"), ordered = T)
+
+#names(item_vis) = item_info$statement
+
+
+item_vis_l = likert(item_vis)
+#summary(item_vis_l)
+
+
+item_dist = plot(item_vis_l, type="bar") + # type = "density" or "heat"
+  labs(title = "Response tendency of each item") +
+  theme(panel.background = element_rect(fill = "transparent", colour = NA),
+        plot.background = element_rect(fill = "transparent", colour = NA))
+print(item_dist)
+```
+
+## Reverse scoring & Correlation matrix
+  * `rawdf` = raw data (with demographics information)
+  * `re_rawdf` = raw data after reverse scoring
+
+```{r}
+re_rawdf = reverse.code(item_info$re_item, rawdf[,c(11:70)], mini = 1, maxi = 5)
+
+item_stat_r = cbind(dimension = item_info$maindim, facet = item_info$subdim, round(describe(re_rawdf), 4)) %>%
+  arrange(dimension, facet)
+colnames(item_stat_r)[3] = "item"
+
+# write.csv(item_stat_r[,-c(4,9:12,15)], "item stat_reversed.csv")
+knitr::kable(item_stat_r, caption = 'Descriptive statistics of all items (n = 519, 5-point scale)')
+
+range(item_stat_r$mean)
+range(item_stat_r$median)
+range(item_stat_r$sd)
+range(item_stat_r$skew)
+range(item_stat_r$kurtosis)
+
+# Can try different types of correlation: Pearson's r, Spearman, or polychoric
+
+# This code (calculating polychoric cor) takes time (about 50 sec?)
+item_poly = polychoric(re_rawdf, ML = F, std.err = F)
+# 972 cells were adjusted for 0 values using the correction for continuity (add 0.5)
+
+# Visualizing tau
+tau = cbind(as.data.frame(item_poly$tau), item = row.names(item_poly$tau))
+tau_l = melt(tau, id = "item", measure = colnames(tau)[1:4], variable.name = "order", value.name = "tau")
+
+ggplot(tau_l, aes(x=tau, y = item)) + geom_point() + geom_line()
+
+item_Pear = cor(re_rawdf)
+
+
+
+# write.csv(item_poly$rho, "cor matrix_poly.csv")
+# write.csv(item_Pear, "cor matrix_Pear.csv")
+
+subject = nrow(re_rawdf)
+n_var = ncol(re_rawdf)
+```
+
+# Item Analysis
+
+## 六大向度計分 (`dimscore`)
+```{r, warning=FALSE, message=FALSE}
+# Scoring key to calculate the scale scores for each of our 5 scal
+itemonly = rawdf[,11:70]
+
+item.keys.list = list(Agree = c(3, -9, -15, -21, 27, 33, 39, 45, 51, -57),
+                      Consc = c(2, 8, -14, -20, -26, -32, 38, -44, 50, -56),
+                      Emo = c(5, 11, 17, 23, 29, -35, -41, 47, -53, -59),
+                      Extra = c(4, -10, 16, 22, -28, 34, 40, -46, -52, 58),
+                      HH = c(6, -12, 18, -24, -30, 36, -42, -48, 54, -60),
+                      Open = c(-1, 7, 13, -19, 25, -31, 37, 43, -49, -55))
+item.keys = make.keys(itemonly, item.keys.list)
+
+item.scored = scoreItems(keys = item.keys, items = itemonly, totals = FALSE,
+                         missing = FALSE, min = 1, max = 5, digits = 3)
+
+item.scored$missing # How many items were not answered for each scale
+
+# item.scored$scores # Each subject's average score (totals = F) on 6 dims
+dimscore = cbind(as.data.frame(item.scored$scores), rawdf[, 2:10])
+
+par(mfrow=c(2,3),mar=c(2,1,1,1))
+hist(dimscore$HH); hist(dimscore$Emo); hist(dimscore$Extra)
+hist(dimscore$Agree); hist(dimscore$Consc); hist(dimscore$Open)
+
+knitr::kable(as.data.frame(round(describeBy(dimscore[1:6]),4))[,-1], caption = 'Descriptive statistics of score in each scale')
+
+#write.csv(round(describeBy(dimscore[1:6]),4)[,-1], "dim score.csv")
+
+stat_gender = describeBy(dimscore[1:6], dimscore$gender)
+print(stat_gender)
+
+#write.csv(describeBy(dimscore[1:6], dimscore$gender)$`1`, "dim score_male.csv")
+#write.csv(describeBy(dimscore[1:6], dimscore$gender)$`2`, "dim score_female.csv")
+
+### Boxplots ###
+library(ggplot2); library(reshape2)
+
+dimscore_l = melt(dimscore, id.vars = colnames(dimscore)[7:ncol(dimscore)], 
+                  measure.vars = colnames(dimscore)[1:6],
+                  variable.name = "Dimension",
+                  value.name = "Score")
+
+scale.labels = c(Agree = "Agreeableness", Consc = "Conscientiousness", Emo = "Emotionality", Extra = "Extraversion", HH = "Honesty-Humility", Open = "Openness to Experience")
+
+ggplot(filter(dimscore_l, gender != "3"), aes(x = gender, y = Score, fill = gender)) + 
+  geom_boxplot(aes(),size = 1) +
+  stat_boxplot(geom ='errorbar', width = 0.4) + # Add whiskers
+  stat_summary(fun.y = mean, geom = "point", shape=5, size=2) + # Add mean notation
+  facet_wrap(~Dimension, labeller=labeller(Dimension = scale.labels)) +
+  labs(x = "Gender", title = "Boxplots of scores in each dimension") +
+  theme_bw() +
+  scale_fill_manual(values=c("#3498db","#e74c3c")) + # Set color for each box
+  scale_x_discrete(breaks=c("1", "2"), labels=c("Male", "Female")) +
+  guides(fill=F) + # Suppress color legend
+  theme(panel.grid.major.x = element_blank(), # Suppress major vertical gridlines
+        panel.grid.minor.x = element_blank(), # Suppress minor vertical gridlines
+        panel.grid.minor.y = element_blank(), # Suppress minor horizontal gridlines
+        panel.border = element_blank(), # Suppress border
+        axis.ticks.x=element_blank(), # Remove x axis ticks for beauty
+        axis.ticks.y=element_blank(), # Remove y axis ticks for beauty
+        strip.background = element_rect(colour="transparent", fill="#CCCCFF"), # facet label color
+        panel.background = element_rect(fill = "transparent", colour = NA), # Background transparent
+        plot.background = element_rect(fill = "transparent", colour = NA)) # Background transparent)
+```
+
+* Welch's t-test (two.sided, α = .05) & Cohen's *d* for gender difference
+    * 代號1~6依序是ACEXHO。
+```{r}
+dimscore_no3 = filter(dimscore, gender != "3")
+dimscore_no3$gender = factor(dimscore_no3$gender, levels = c("1", "2"))
+library(effsize)
+dimttest = list(); ESlist = list()
+
+for (i in 1:6){
+  dimttest[[i]] = t.test(dimscore_no3[, i] ~ gender, data = dimscore_no3, var.equal = F)
+  ESlist[[i]] = cohen.d(dimscore_no3[, i] ~ dimscore_no3$gender)
+  #print(dimttest[[i]]); print(ESlist[[i]])
+}
+
+t.vector = numeric(); t.df = numeric() ;t.p = numeric(); t.lower = numeric(); t.upper = numeric()
+ES.vector = numeric(); ES.lower = numeric(); ES.upper = numeric()
+for (i in 1:6){
+  t.vector[i] = dimttest[[i]]$statistic; t.df[i] = dimttest[[i]]$parameter; t.p[i] = dimttest[[i]]$p.value
+  t.lower[i] = dimttest[[i]]$conf.int[1]; t.upper[i] = dimttest[[i]]$conf.int[2]; ES.vector[i] = ESlist[[i]]$estimate; ES.lower[i] = ESlist[[i]]$conf.int[1]; ES.upper[i] = ESlist[[i]]$conf.int[2]
+}
+
+
+dim_test_gender = data.frame(colnames(dimscore)[1:6], stat_gender$`1`[,"mean"], stat_gender$`2`[,"mean"],
+                             stat_gender$`1`[,"sd"], stat_gender$`2`[,"sd"], t.vector, t.df,t.p, t.lower, t.upper,
+                             ES.vector, ES.lower, ES.upper)
+colnames(dim_test_gender) = c("Dimension", "Mean (M)", "Mean (F)", "SD (M)", "SD (F)", "t", "df", "p-value",
+                              "Mean difference (Lower)", "Mean difference (Upper)", "Cohen's d", "Lower d", "Upper d")
+dim_test_gender[, 2:12] = round(dim_test_gender[, 2:12], 4)
+knitr::kable(dim_test_gender, caption = "兩性在HEXACO各子量表之差異比較")
+# write.csv(dim_test_gender, "dim_test_gender.csv")
+```
+
+
+## 向度內/間相關 (`item.scored$corrected`)
+```{r}
+#item.scored$av.r # Average correlation within a scale (What does this mean?)
+
+#item.scored$item.corrected # Corr(item, scale), corrected for item overlap)
+
+
+# Correlations of all scales (below the diagonal), alpha on the diagonal, and the unattenuated correlations (above the diagonal)
+knitr::kable(round(item.scored$corrected, 4), caption = 'Scale intercorrelations corrected for attenuation')
+```
+
+* 下三角為校正後的各向度總分之間相關，上三角則是未校正的結果。
+* 對角線為各量表的Cronbach's α。
+
+## 各向度信度分析
+
+1. 信度與其95%信賴區間
+* The lower/ upper bound of a confidence interval for an *α* that is based on the data of *n* individuals who responded to *k* items is defined as (where *c* is the level of confidence)
+$$
+L = 1 - (1 - \alpha)F_{1 - \frac{c}{2}} \\
+U = 1 - (1 - \alpha)F_{\frac{c}{2}}
+$$
+* [Feldt et al., 1987, p. 95, formula 6 & 7](http://journals.sagepub.com/doi/abs/10.1177/014662168701100107)
+
+
+```{r, warning=FALSE}
+item.scored$alpha # (Unstandardized) Alpha
+
+output.alpha.Agree = psych::alpha(itemonly[,abs(item.keys.list$Agree)], check.keys=T)
+output.alpha.Consc = psych::alpha(itemonly[,abs(item.keys.list$Consc)], check.keys=T)
+output.alpha.Emo = psych::alpha(itemonly[,abs(item.keys.list$Emo)], check.keys=T)
+output.alpha.Extra = psych::alpha(itemonly[,abs(item.keys.list$Extra)], check.keys=T)
+output.alpha.HH = psych::alpha(itemonly[,abs(item.keys.list$HH)], check.keys=T)
+output.alpha.Open = psych::alpha(itemonly[,abs(item.keys.list$Open)], check.keys=T)
+
+# Manipulating the reliability objects to get what we want
+scale.names = c("Agreeableness","Conscientiousness","Emotionality","Extraversion","Honesty-Humility","Openness to Experience")
+
+HEXACO.alphas = as.numeric(c(output.alpha.Agree$total[1],
+                              output.alpha.Consc$total[1],
+                              output.alpha.Emo$total[1],
+                              output.alpha.Extra$total[1],
+                              output.alpha.HH$total[1],
+                              output.alpha.Open$total[1]))
+
+# Calculate alpha 95% CI
+library(cocron)
+alphaCI = mapply(cronbach.alpha.CI, HEXACO.alphas, subject, item.scored$n.items, .95)
+HEXACO.alpha.table = data.frame(Scale = scale.names, Alpha = HEXACO.alphas, Lower = alphaCI[1,], Upper = alphaCI[2,])
+HEXACO.alpha.table[,2:4] = round(HEXACO.alpha.table[,2:4], 4)
+knitr::kable(HEXACO.alpha.table, caption = 'Cronbach’s alpha and its 95% C.I. of each dimension') # Close to `item.scored$alpha`
+
+# write.csv(HEXACO.alpha.table, "alpha.csv")
+```
+
+2. `$alpha.drop`：刪題後信度
+* 所有題目大致表現良好。
+
+```{r}
+output.alpha.Agree$alpha.drop
+output.alpha.Consc$alpha.drop
+output.alpha.Emo$alpha.drop
+output.alpha.Extra$alpha.drop
+output.alpha.HH$alpha.drop
+output.alpha.Open$alpha.drop
+```
+
+* `$item.stats`：各題的相關統計量
+    * `n`: number of complete cases for the item
+    * `raw.r`: correlation of each item with the total score, not corrected for item overlap
+    * `std.r`: correlation of each item with the total score, not corrected for item overlap, based on standardized items
+    * `r.cor`: correlation of each item with the total score, corrected for item overlap and scale reliability
+    * `r.drop`: correlation of each item with the total score, NOT including this item
+    * `mean`: mean of the item
+    * `sd`: standard deviation of the item
+```{r}
+output.alpha.Agree$item.stats
+output.alpha.Consc$item.stats
+output.alpha.Emo$item.stats
+output.alpha.Extra$item.stats
+output.alpha.HH$item.stats
+output.alpha.Open$item.stats
+```
+
+# Before EFA
+
+## Eigenvalues of the original correlation matrix
+```{r}
+eigen(item_poly$rho, only.values = T)$values
+```
+
+## KMO & Bartlett test
+```{r}
+item_KMO = KMO(item_poly$rho)
+print(item_KMO)
+cortest.bartlett(item_poly$rho, n = subject)
+```
+
+# Estimation of Factor Number (based on poly cor)
+
+## Parallel analysis (200 random samples)
+
+1. PF method (Percentile = 95)
+```{r,message=FALSE,warning=FALSE, results="hide", fig.keep="none"}
+library(paramap)
+###### package ‘paramap’ is not available for R version 3.4.0
+rep = 200
+baseline = 95
+PAPF_poly = rawpar(item_poly$rho, randtype='generated', extract='PAF',
+            Ndatasets = rep, percentile = baseline,
+            corkindRAND = 'polychoric',
+            Ncases = subject, display='yes')
+
+#PAPF_poly$eigenvalues
+#PAPF_poly$nfPA # Suggested 22 factors
+
+# Define scree plot function for `rawpar`: plotsc(PA, Extraction, percentile, maxfactor)
+#   PA = the object produced by `rawpar`
+#   Extraction = "PC" or "PF"
+#   percentile = 95 (for example)
+#   maxfactor = the xlim of scree plot
+
+plotsc = function(PA, Extraction, percentile, maxfactor){
+
+if (!require("pacman")) install.packages("pacman"); library(pacman)
+  p_load(reshape2, ggplot2)
+    
+PA_df = as.data.frame(PA$eigenvalues)
+
+colnames(PA_df) = c("Real Data", "Root", "Mean", paste0(as.character(percentile),"%"," Percentile"))
+
+PA_df = melt(PA_df, id.vars = c("Root"), 
+             measure.vars = colnames(PA_df)[-2], 
+             variable.name="Condition", 
+             value.name="Eigenvalue")
+
+ggplot(PA_df, aes(x=Root, y=Eigenvalue, color = Condition)) +
+  geom_line(aes(y=Eigenvalue, colour = Condition, linetype = Condition), stat = 'identity', size = 1) + 
+  geom_point(aes(y=Eigenvalue, colour = Condition, shape = Condition), size = 2) +
+  labs(x="Number of factors",y = "Eigenvalue", title = "Scree Plot",
+       subtitle = paste("Extraction method:", Extraction)) +
+  theme_bw() +
+  scale_x_continuous(limits = c(1, maxfactor), breaks = rep(1:maxfactor)) +
+  theme(axis.line = element_line(colour = "black"), # Make "l" type axis
+        panel.border = element_blank(), # Make "L" type axis
+        legend.position=c(.85, .85), # Position of the legend
+        legend.background = element_rect(fill = "transparent", size = .5, linetype = "dotted"), 
+        panel.grid.major.x = element_blank(), # Suppress major vertical gridlines
+        panel.grid.minor.x = element_blank(), # Suppress minor vertical gridlines
+        panel.background = element_rect(fill = "transparent", colour = NA), # Background transparent
+        plot.background = element_rect(fill = "transparent", colour = NA)) # Background transparent
+  
+}
+
+plotsc(PAPF_poly, "PF", baseline, 20)
+```
+
+2. PC method (Percentile = 95)
+
+```{r, eval=FALSE, results="hide", fig.keep="none"}
+PAPC_poly = rawpar(item_poly$rho, randtype = 'generated', extract = 'PCA',
+            Ndatasets = rep, percentile = baseline,
+            corkindRAND = 'polychoric',
+            Ncases = subject, display = 'yes')
+
+#PAPC_poly$eigenvalues
+#PAPC_poly$nfPA # Suggested 9 factors
+
+plotsc(PAPC_poly, "PC", baseline, 20)
+```
+
+3. [PA by `psych`](https://sakaluk.wordpress.com/2016/05/26/11-make-it-pretty-scree-plots-and-parallel-analysis-using-psych-and-ggplot2/)
+* `fa.parallel` run PC & PF simultaneously.
+
+```{r, fig.keep="none", results="hide"}
+PA_poly = fa.parallel(item_poly$rho, n.obs = subject, fa = "both", n.iter = rep, 
+                      cor = "poly", error.bars = F, SMC = T, quant = baseline/100)
+```
+```{r, warning=FALSE}
+psych.pa = function(PA, rep, baseline, maxfactor){
+
+if (!require("pacman")) install.packages("pacman"); library(pacman)
+  p_load(reshape2, ggplot2)
+  
+  
+PA_df = data.frame(Root = 1:length(PA$pc.values), Real.pc = PA$pc.values, Sti.pc = PA$pc.sim,
+                   Real.pf = PA$fa.values, Sti.pf = PA$fa.sim)
+colnames(PA_df) = c("Root", "Real data (PC)", "Stimulated data (PC)", "Real data (PF)", "Stimulated data (PF)")
+
+PA_df = melt(PA_df, id.vars = c("Root"), 
+             measure.vars = colnames(PA_df)[-1], 
+             variable.name="Condition", 
+             value.name="Eigenvalue")
+
+ggplot(PA_df, aes(x=Root, y=Eigenvalue, color = Condition)) +
+  geom_line(aes(y=Eigenvalue, colour = Condition, linetype = Condition), stat = 'identity', size = 1) + 
+  geom_point(aes(y=Eigenvalue, colour = Condition, shape = Condition), size = 2) +
+  labs(x="Number of components/factors",y = "Eigenvalue", title = "Scree Plot",
+       subtitle = paste0("Stimulated eigenvalue: ", as.character(baseline), "% percentile based on ", as.character(rep), " replications" ),
+       caption = paste0("PA suggests ", as.character(PA$nfact), " factors and ", as.character(PA$ncomp), " components.")) +
+  theme_bw() +
+  scale_x_continuous(limits = c(1, maxfactor), breaks = rep(1:maxfactor)) +
+  scale_color_manual(values=c("#16a085", "#27ae60", "#d35400", "#f1c40f")) +
+  scale_linetype_manual(values=c("solid", "dashed", "solid", "dashed")) +
+  scale_shape_manual(values=c(19, 1, 15, 0)) +
+  theme(axis.line = element_line(colour = "black"), # Make "l" type axis
+        panel.border = element_blank(), # Make "L" type axis
+        legend.position=c(.85, .85), # Position of the legend
+        legend.background = element_rect(fill = "transparent", size = .5, linetype = "dotted"), 
+        panel.grid.major.x = element_blank(), # Suppress major vertical gridlines
+        panel.grid.minor.x = element_blank(), # Suppress minor vertical gridlines
+        panel.background = element_rect(fill = "transparent", colour = NA), # Background transparent
+        plot.background = element_rect(fill = "transparent", colour = NA)) # Background transparent
+  
+}
+
+psych.pa(PA_poly, rep, baseline, 25)
+```
+
+## MAP
+```{r}
+MAP_ploy = map(item_poly$rho, display='yes')
+#MAP_ploy$avgsqrs
+#MAP_ploy$nfMAP # Suggest 7 factors
+#MAP_ploy$nfMAP # Suggest 11 factors
+```
+
+## Fit Indices 
+
+* `map`: Velicer's MAP (1976) values (lower values are better) 
+* `dof`: degrees of freedom
+* `chisq`: chi square (from the factor analysis output)
+* `prob`: probability of residual matrix > 0
+* `sqresid`: squared residual correlations
+* `eChiSq`: the empirically found chi square 
+* `eRMS`: Empirically found mean residual 
+* `eCRMS`: Empirically found mean residual corrected for df 
+* `eBIC`: The empirically found BIC based upon the eChiSq 
+```{r}
+fit_ob = nfactors(item_poly$rho, n = 11, rotate = "oblimin", diagonal=F, fm = "minres",
+                  n.obs=subject, cor = "poly")
+print(fit_ob)
+```
+
+## EV of **R**(1) > 1 rule
+```{r}
+sum(eigen(item_poly$rho, only.values = T)$values > 1)
+# EV > 1 suggested 16 factors
+```
+
+
+# Estimation of Factor Loadings
+
+* 以六因子為例，使用OLS、ML與PA方法估計出的因素負荷量之一致性係數很高，故以下僅採用OLS方法。
+* 關於一致性係數的說明，請見Measurement Invariance for Gender。
+```{r}
+olsfa_6 = fa(item_poly$rho, n.obs = subject, nfactors = 6, 
+            rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+            fm="minres", cor="poly")
+mlfa_6 = fa(item_poly$rho, n.obs = subject, nfactors = 6, 
+            rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+            fm="ml", cor="poly")
+pffa_6 = fa(item_poly$rho, n.obs = subject, nfactors = 6, 
+            rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+            fm="pa", cor="poly")
+
+#olsfa_6$loadings - mlfa_6$loadings
+#olsfa_6$loadings - pffa_6$loadings
+#mlfa_6$loadings - pffa_6$loadings
+
+factor.congruence(olsfa_6$loadings, mlfa_6$loadings, digits=4)
+factor.congruence(olsfa_6$loadings, pffa_6$loadings, digits=4)
+factor.congruence(pffa_6$loadings, mlfa_6$loadings, digits=4)
+```
+
+## OLS & Oblimin rotation (restricted to 1-11 factors)
+* Convergence not obtained when # of factors = 12.
+```{r, message=FALSE}
+olsfa = list()
+factorrange = 1:11
+for (i in factorrange){
+olsfa[[i]] = fa(item_poly$rho, n.obs = subject, nfactors = i,
+                rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+                fm="minres", cor="poly")
+}
+```
+
+## OLS & Varimax rotation (restricted to 1-11 factors)
+
+* 因為經由斜交轉軸發現因素間相關很低（見後），所以此處也用正交轉軸。
+* `psych::fa`的`rotate = "varimax"`並沒有進行Kaiser normalization。
+* 所以要用`psych::Kaiser`來做Kaiser normalization。
+```{r, message=FALSE}
+olsfa_Va = list(); olsfa_Va_n = list()
+factorrange = 1:11
+for (i in factorrange){
+olsfa_Va[[i]] = fa(item_poly$rho, n.obs = subject, nfactors = i,
+                   rotate="varimax", residuals=T, SMC=T, max.iter = 50,
+                   fm="minres", cor="poly")
+}
+for (i in 2:11){
+  olsfa_Va_n[[i]] = olsfa_Va[[i]] # One-factor model cannot rotate
+  olsfa_Va_n[[i]] = kaiser(olsfa_Va[[i]], rotate = "Varimax")
+}
+
+```
+
+* 兩種轉軸方法的因素結構具有一致性。
+```{r}
+factor.congruence(olsfa_Va[[6]]$loadings, olsfa[[6]]$loadings, digits = 4)
+factor.congruence(olsfa_Va_n[[6]]$loadings, olsfa[[6]]$loadings, digits = 4)
+factor.congruence(olsfa_Va[[7]]$loadings, olsfa[[7]]$loadings, digits = 4)
+factor.congruence(olsfa_Va_n[[7]]$loadings, olsfa[[6]]$loadings, digits = 4)
+```
+
+
+# Evaluation of Factor Solution
+
+## Fit Indices Table
+
+  * 較全面的適配度指標結果可見上節，本處僅呈現較常被報告的資訊。
+  * `sdres`：殘差矩陣的標準差    
+  * 其他適配度指標的說明可見[此處 p.129-131](https://cran.r-project.org/web/packages/psych/psych.pdf)。
+  * OLS & Oblimin rotation跑出來的適配度指標數值與Varimax的相同。
+
+```{r}
+# A better solution is needed for the below code
+fit.off = vector(); sdres = vector()
+RMSR = vector(); aRMSR = vector(); RMSEA = vector()
+TLI = vector(); BIC = vector(); factors = vector()
+
+for (i in factorrange){
+  factors[i] = i
+  fit.off[i] = olsfa[[i]]$fit.off
+  sdres[i] = sd(olsfa[[i]]$residual)
+  RMSR[i] = olsfa[[i]]$rms
+  aRMSR[i] = olsfa[[i]]$crms
+  RMSEA[i] = olsfa[[i]]$RMSEA[1]
+  TLI[i] = olsfa[[i]]$TLI
+  BIC[i] = olsfa[[i]]$BIC
+}
+
+fit_df = data.frame(factors, fit.off, sdres, RMSR, aRMSR, RMSEA, TLI, BIC)
+rm(fit.off, sdres, RMSR, aRMSR, RMSEA, TLI, BIC, factors)
+
+# RMSR = root mean square of the off diagonal residuals
+# aRMSR = RMSR adjusted for degrees of freedom
+
+knitr::kable(round(fit_df,3), caption = 'Fit indices for different number of factors')
+
+#write.csv(round(fit_df,4), "fit.csv")
+```
+
+
+# Details of 6 factors solution (`fa.lookup`)
+
+## OLS & Varimax (without normalization)
+```{r, eval=FALSE}
+# Print out the 6-factor solution in details (including fit indices)
+olsfa_Va[[6]] # The same amount of output using print.psych()
+
+
+# Make the loading matrix easier to read
+#rownames(item_info) = colnames(re_rawdf)
+
+#olsfa_Va_n_p = list() # Pattern matrix list
+
+#for (i in 2:11){
+  #olsfa_Va_n_p[[i]] = fa.lookup(olsfa_Va_n[[i]], item_info[,-4], digits = 4) # Pattern matrix
+#}
+
+# Print out the 6-factor solution
+#knitr::kable(as.data.frame(olsfa_Va_p[[6]], caption = 'Pattern matrix'))
+#write.csv(olsfa_Va_n_p[[7]], "ols7_varimax (n)_P.csv")
+```
+
+## OLS & Oblimin
+```{r}
+# Print out the 6-factor solution in details (including fit indices)
+olsfa[[6]] # The same amount of output using print.psych()
+
+
+# Make the loading matrix easier to read
+# Must include the reverse item information to ensure there is no NA in dimension information
+# rownames(item_info) = colnames(re_rawdf)
+
+#olsfa_p = list() # Pattern matrix list
+#olsfa_s = list() # Structure matrix list
+#for (i in 1:11){
+ #olsfa_p[[i]] = fa.lookup(olsfa[[i]], item_info[,-4], digits = 4) # Pattern matrix
+ #olsfa_s[[i]] = fa.lookup(olsfa[[i]]$Structure, item_info[,-4], digits = 4) # Structure matrix
+#}
+
+# Print out the 6-factor solution
+#knitr::kable(as.data.frame(olsfa_p[[6]], caption = 'Pattern matrix'))
+#knitr::kable(as.data.frame(olsfa_p[[6]], caption = 'Structure matrix'))
+
+#write.csv(olsfa_p[[8]], "ols8_oblique_P.csv")
+#write.csv(olsfa_s[[8]], "ols8_oblique_S.csv")
+#write.csv(olsfa[[7]]$Phi, "ols7_oblique_Phi.csv")
+```
+
+# Visualization
+## Some resources
+
+  * [靈感來源](http://rpubs.com/danmirman/plotting_factor_analysis)
+  * [Multiple plots arrangment 1](https://cran.r-project.org/web/packages/cowplot/vignettes/plot_grid.html)
+  * [Multiple plots arrangment 2](http://stackoverflow.com/questions/36198451/specify-widths-and-heights-of-plots-with-grid-arrange)
+  * [Axis & label](https://rstudio-pubs-static.s3.amazonaws.com/3364_d1a578f521174152b46b19d0c83cbe7e.html)
+  * [中文字體與ggplot2](https://blog.gtwang.org/r/how-to-use-your-favorite-fonts-in-r-charts/)
+  * [中文字體與R](http://www.voidcn.com/blog/u014032673/article/p-5979394.html)
+
+## Multiple loading plots function
+
+  * `loadbar(loadmat, iteminfo, type, extraction)` generate plots for all possible factor solution in R & .pdf automatically
+  * You must specify:
+      * `loading` = The object returned from either a factor analysis (`fa`) or a principal components analysis (`principal`)
+      * `iteminfo` = A data.frame with the information of all items to display. The input format is: row = each item; col = item information (maindim, subdim, & statement).
+      * `type` = "Pattern" (default) or "Structure" matrix. For orthogonal rotations, `type` must be "Pattern"; for oblique rotations, type can be either "Pattern" or "Structure".
+      * `extraction` = The method of initial factor loading estimation you use, e.g., `extraction = "IPF"`.
+
+```{r, echo=FALSE}
+knitr::kable(head(item_info[,-4], 4), caption = "The data format for iteminfo")
+```
+
+
+  * Optional
+      * `axis` = "maindim" (default), "item", or "statement"
+      * `filename` = "faplots.pdf" (name of the pdf file)
+      * `rel_widths` = c(4,1) (relative width ratio between the loading and communality plot)
+      * `widthpdf` = 15 (the width of the graphics region in pdf in inches)
+      * `widthheight` = 11 (the height of the graphics region in pdf in inches)
+  * For each solution, plot the loading (or correlation between factors and variables) as length and fill color of a bar note that the length will be the absolute value of the loading but the fill color will be the signed value.
+
+
+
+```{r, fig.keep="none", results="hide"}
+rownames(item_info) = colnames(re_rawdf)
+#library(showtext)
+#showtext.auto(enable = T)
+#font.families()
+#font.add("wqy", "wqy-microhei/wqy-microhei.ttc")
+#font.add('華康中黑體', "華康中黑體.TTC")
+#font.files()
+#尚未處理ggplot中文支援
+
+
+loadbar = function(loading, iteminfo, type="Pattern", axis="maindim", extraction = "Unknown", filename="faplots.pdf", rel_widths = c(4,1), widthpdf = 15, widthheight = 11){
+  
+  # Create the empty list first to save ggplot objects
+  faplot.list = list()
+
+  ################ Check packages by `pacman` ################
+  
+  if (!require("pacman")) install.packages("pacman"); library(pacman)
+  p_load(reshape2, ggplot2, cowplot, grid, dplyr, psych)
+  
+  loadmat = list()
+  
+  if (type == "Pattern"){
+    hlab = "Loading Strength"
+    for(i in 1:length(loading)){
+      loadmat[[i]] = fa.lookup(loading[[i]], iteminfo, digits = 4)
+    }
+  }
+  else if (type == "Structure"){
+    hlab = "Correlation (Factors, Varibles)"
+    for(i in 1:length(loading)){
+      item_cc = data.frame(rownames= row.names(loading[[i]]$Structure),
+                           h2 = loading[[i]]$communality, com = loading[[i]]$complexity)
+      loadmat[[i]] = fa.lookup(loading[[i]]$Structure, iteminfo, digits = 4)
+      loadmat[[i]] = inner_join(cbind(loadmat[[i]], rownames = row.names(loadmat[[i]])), item_cc, by = "rownames")
+      row.names(loadmat[[i]]) = loadmat[[i]]$rownames
+      loadmat[[i]] = select(loadmat[[i]], -rownames)
+      
+    }
+  }
+    
+  loadmat_l = list()
+  
+  for (i in 1:length(loadmat)){
+    
+    ################ Data transformation for further plotting ################
+    loadmat[[i]] = cbind(loadmat[[i]], item = row.names(loadmat[[i]]))
+    
+    complexity = paste0("Mean item complexity = ", as.character(round(mean(loadmat[[i]]$com), 2)),
+                        " (SD = ", as.character(round(sd(loadmat[[i]]$com), 2)), ")")
+    submain = paste0(extraction, " method with ", loading[[i]]$rotation, " rotation. (N = ", loading[[i]]$n.obs,")")
+    fit = paste0("RMSEA = ", as.character(round(loading[[i]]$RMSEA[1],3)),
+                 "; BIC = ", as.character(round(loading[[i]]$BIC,3)),
+                 "; TLI = ", as.character(round(loading[[i]]$TLI,3)),".")
+    
+    loadmat_l[[i]] = melt(loadmat[[i]], id = c("com","h2","maindim","subdim","statement", "item"), 
+                          measure = subset(colnames(loadmat[[i]]),
+                                           colnames(loadmat[[i]])!="statement"&
+                                           colnames(loadmat[[i]])!="com"&
+                                           colnames(loadmat[[i]])!="h2"&
+                                           colnames(loadmat[[i]])!="maindim"&
+                                           colnames(loadmat[[i]])!="subdim"&
+                                           colnames(loadmat[[i]])!="item"),
+                          variable.name="Factor", value.name="Loading")
+
+    # To make x-axis of ggplot follow the specific order (original pattern/structure matrix order)
+    loadmat_l[[i]]$item = factor(loadmat_l[[i]]$item, levels = loadmat[[i]]$item)
+
+    if (axis == "item"){
+      align = 0
+      vlab = "Item"
+      vlabel = loadmat_l[[i]]$item
+    }else if (axis == "statement"){
+      align = 1
+      vlab = "Item & Statement"
+      vlabel = loadmat_l[[i]]$statement
+    }else if (axis == "maindim"){
+      align = 1
+      vlab = "Item & Dimension"
+      vlabel = loadmat_l[[i]]$maindim
+    }
+    
+    loadmat_l[[i]]$Communality = factor(rep("Communality", nrow(loadmat_l[[i]])))
+
+    ################ Plot Pattern/Structure Matrix ################
+  
+    assign("PS", ggplot(loadmat_l[[i]], aes(item, abs(Loading), fill = Loading)) + 
+      facet_wrap(~ Factor, nrow = 1) + 
+      geom_bar(stat = "identity") + 
+      coord_flip() +
+      # Define the fill color gradient: blue=positive, red=negative
+      scale_fill_gradient2(name = "Loading", 
+                           high = "blue", mid = "white", low = "red", 
+                           midpoint = 0, guide = F) +
+      scale_x_discrete(labels = vlabel) +
+      labs(x = vlab,y = hlab, title = paste("Barplot of the", type,"Matrix"), subtitle = submain, caption = "") + 
+      theme_bw(base_size = 10) + #use a black-and white theme with set font size  
+      theme(axis.text.y=element_text(hjust=align), # Align of the `axis`
+            #legend.position=c(.85, .85),
+            #legend.background = element_rect(fill="transparent", size=.5, linetype="dotted"), 
+            #text=element_text(family="華康中黑體", size=10),
+            strip.background = element_rect(colour="transparent", fill="#CCCCFF"), # facet label color
+            panel.background = element_rect(fill = "transparent", colour = NA),
+            panel.border = element_blank(), #element_rect(colour = "#CCCCFF"),
+            plot.background = element_rect(fill = "transparent", colour = NA)) +
+      background_grid(major = 'x', minor = "none"))# +
+      #panel_border(colour = "#CCCCFF"): The same with panel.background in theme
+  
+    ################ Plot Communality ################
+    
+    assign("COM", ggplot(distinct(loadmat_l[[i]], item, h2, Communality), aes(item, h2, fill = h2)) +
+      geom_bar(stat = "identity") + 
+      facet_wrap(~ Communality, nrow = 1) +
+      coord_flip() +
+      scale_fill_gradient2(name = "h2", 
+                           high = "black", mid = "grey", low = "white", 
+                           midpoint = 0, guide = F) +
+      labs(y = "Communality", title="", subtitle = complexity, caption = fit) +
+      theme_bw(base_size = 10) +
+      theme(axis.text.y=element_text(hjust=0), # Retain y axis labels for convenience
+            axis.line.y = element_line(colour = "black"), # Make "l" type axis
+            panel.border = element_blank(), # Suppress border
+            strip.background = element_rect(colour="transparent", fill="gray80"), # facet label color
+            axis.title.y=element_blank(), # Remove y axis lab for beauty
+            axis.ticks.y=element_blank(), # Remove y axis ticks for beauty
+            panel.background = element_rect(fill = "transparent", colour = NA),
+            plot.background = element_rect(fill = "transparent", colour = NA)) +
+      background_grid(major = 'x', minor = "none"))
+  
+    ################ Marge two plot  ################
+  
+    g.PS = ggplotGrob(PS); g.COM = ggplotGrob(COM)
+    PS.heights = g.PS$heights[1:3] 
+    COM.heights = g.COM$heights[1:3] # same for mpg plot
+    max.heights = unit.pmax(PS.heights, COM.heights) # calculate maximum heights
+    g.PS$heights[1:3] = max.heights # assign max heights to PS gtable
+    g.COM$heights[1:3] = max.heights # assign max heights to COM gtable
+  
+    # plot_grid() can work directly with gtables, so this works!
+    faplot.list[[i]] = plot_grid(g.PS, g.COM, ncol = 2, rel_widths = rel_widths)
+    
+  }
+  
+  ################ Create pdf where each page is a separate plot ################
+  
+  pdf(filename, width = widthpdf, height = widthheight)
+  for (i in 1:length(loadmat)) {
+    print(faplot.list[[i]])
+  }
+  dev.off()
+  
+  cat("The ggplot objects are saved into a list you assign.\n\nFor example, if you assign the `loadpar` function into a variable called `faplot`, i.e., `faplot = loadpar(...)`, then the plot of m factor solution can be called by `faplot[[m]]`.\n\nFor converience, all plots are saved into a single pdf file in the working directory.")
+  
+  return(faplot.list) # Return the ggplot object for further use
+
+}
+
+ols_oblique_P =loadbar(olsfa, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblique_P.pdf")
+ols_oblique_S = loadbar(olsfa, item_info[,-4], type="Structure", axis="maindim", extraction = "OLS", filename="faplot_oblique_S.pdf")
+ols_varimax = loadbar(olsfa_Va, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_varimax_NEW.pdf")
+# 欲印出各題敘述時 (axis="statement")，需先設定中文字體，然後在Console執行該函數，才可成功
+# See pdf
+```
+
+# EFA using Pearson cor
+```{r}
+KMO(item_Pear)
+subject = nrow(re_rawdf); cortest.bartlett(item_Pear, n = subject)
+```
+```{r, fig.keep="none", results="hide"}
+PA_Pear = fa.parallel(item_Pear, n.obs = subject, fa = "both", n.iter = rep, 
+                      cor = "cor", error.bars = F, SMC = T, quant = baseline/100)
+```
+```{r}
+psych.pa(PA_Pear, rep, baseline, 25)
+fit_ob_Pear = nfactors(item_Pear, n = 11, rotate = "oblimin", diagonal=F, fm = "minres",
+                  n.obs=subject, cor = "cor")
+print(fit_ob_Pear)
+sum(eigen(item_Pear, only.values = T)$values > 1)
+
+olsfa_Pear = list()
+for (i in factorrange){
+olsfa_Pear[[i]] = fa(item_Pear, n.obs = subject, nfactors = i,
+                rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+                fm="minres", cor="cor")
+}
+factor.congruence(olsfa_Pear[[6]]$loadings, olsfa[[6]]$loadings, digits = 4)
+factor.congruence(olsfa_Pear[[7]]$loadings, olsfa[[7]]$loadings, digits = 4)
+
+ols_oblique_P_Pear =loadbar(olsfa_Pear, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblique_P_Pear.pdf")
+```
+
+
+# Measurement Invariance for Gender
+
+* 檢驗男女性在本量表的測量不變性有無不同。
+* 因為看到有研究說明兩性在某些向度上有顯著差異（在本研究也如此），為釐清此差異是否具有效度，而進行測量不變性的檢驗。
+* Here we follow the procedures recommended by [Nimon, K., & Reio Jr, T. G. (2011)](http://journals.sagepub.com/doi/abs/10.1177/1534484311399731) (except for CFA part).
+
+## Reliability
+
+* [ggplot2 & errorbar](http://www.cookbook-r.com/Graphs/Plotting_means_and_error_bars_(ggplot2)/)
+```{r, warning=FALSE}
+rawdf_glist = list(); itemonly_glist = list(); item.keys_glist = list(); item.scored_glist = list()
+HEXACO.alphas_glist = list(); alphaCI_glist = list()
+for (i in 1:2){
+  rawdf_glist[[i]] = subset(rawdf, rawdf$gender == as.character(i))
+  itemonly_glist[[i]] = rawdf_glist[[i]][,11:70]
+  item.keys_glist[[i]] = make.keys(itemonly_glist[[i]], item.keys.list)
+  item.scored_glist[[i]] = scoreItems(keys = item.keys_glist[[i]], items = itemonly_glist[[i]],
+                                      totals = F, missing = F, min = 1, max = 5, digits = 3)
+  output.alpha.Agree = psych::alpha(itemonly_glist[[i]][,abs(item.keys.list$Agree)], check.keys=T)
+  output.alpha.Consc = psych::alpha(itemonly_glist[[i]][,abs(item.keys.list$Consc)], check.keys=T)
+  output.alpha.Emo = psych::alpha(itemonly_glist[[i]][,abs(item.keys.list$Emo)], check.keys=T)
+  output.alpha.Extra = psych::alpha(itemonly_glist[[i]][,abs(item.keys.list$Extra)], check.keys=T)
+  output.alpha.HH = psych::alpha(itemonly_glist[[i]][,abs(item.keys.list$HH)], check.keys=T)
+  output.alpha.Open = psych::alpha(itemonly_glist[[i]][,abs(item.keys.list$Open)], check.keys=T)
+  HEXACO.alphas_glist[[i]] = as.numeric(c(output.alpha.Agree$total[1], output.alpha.Consc$total[1],
+                                          output.alpha.Emo$total[1], output.alpha.Extra$total[1],
+                                          output.alpha.HH$total[1], output.alpha.Open$total[1]))
+  alphaCI_glist[[i]] = mapply(cronbach.alpha.CI, HEXACO.alphas_glist[[i]], nrow(rawdf_glist[[i]]), item.scored_glist[[i]]$n.items, .95)
+}
+
+HEXACO.alpha.gtable = data.frame(Scale = scale.names,
+                                 Alpha_m = HEXACO.alphas_glist[[1]],
+                                 Alpha_f = HEXACO.alphas_glist[[2]],
+                                 Lower_m = alphaCI_glist[[1]][1,],
+                                 Lower_f = alphaCI_glist[[2]][1,],
+                                 Upper_m = alphaCI_glist[[1]][2,],
+                                 Upper_f = alphaCI_glist[[2]][2,])
+HEXACO.alpha.gtable = melt(setDT(HEXACO.alpha.gtable), id.vars = "Scale",
+                           measure = patterns("Alpha","Lower","Upper"),
+                           variable.name=c("Gender"),
+                           value.name=c("Alpha", "Lower", "Upper"))
+levels(HEXACO.alpha.gtable$Gender) = c("Male", "Female")
+HEXACO.alpha.gtable[,3:5] = round(HEXACO.alpha.gtable[,3:5], 4)
+HEXACO.alpha.gtable = arrange(HEXACO.alpha.gtable, Scale)
+
+knitr::kable(HEXACO.alpha.gtable, caption = 'Standarized alpha and its 95% C.I. of each dimension (grouped by gender)')
+
+ggplot(HEXACO.alpha.gtable, aes(x = Scale, y = Alpha, ymax = Upper, ymin = Lower, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(position = position_dodge(width = .9), width = .5) +
+  scale_y_continuous(limits = c(0, 1)) +
+  coord_flip() +
+  labs(x="Dimension",y = expression(paste("Cronbach’s ", alpha)),
+       title="Reliability of each subscale", subtitle = "Errorbars represent 95% C.I.") +
+  theme_bw() +
+  scale_fill_manual(values=c("#3498db","#e74c3c")) +
+  theme(axis.line = element_line(colour = "black"), # Make "l" type axis
+        panel.border = element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.background = element_rect(fill = "transparent", colour = NA),
+        plot.background = element_rect(fill = "transparent", colour = NA)
+        ) +
+  background_grid(major = 'none', minor = "none") # From package `cowplot`
+
+# write.csv(HEXACO.alpha.gtable, "alpha_gender.csv")
+```
+
+* 上述結果顯示，HEXACO量表在本研究的內部一致性信度表現無顯著性別差異。
+* 上述結果顯示，整體而言，H向度的內部一致性信度最低，A與X則較高。
+
+## Factorial Structure
+
+* 男性與女性樣本在各方法所建議的因素數目相同嗎？
+* 若相同，那細部因素結構會一致嗎？
+
+1. 因素數目
+```{r, results="hide", fig.keep="none"}
+re_rawdf_glist = list(); item_poly_glist = list(); dummy = c("Male", "Female"); fit_ob = list()
+PA_polyglist = list(); MAP_ployglist = list(); EVg = list()
+for (i in 1:2){
+  re_rawdf_glist[[i]] = reverse.code(item_info$re_item, rawdf_glist[[i]][11:70], mini = 1, maxi = 5)
+  item_poly_glist[[i]] = polychoric(re_rawdf_glist[[i]], ML = F, std.err = F)
+  subject = nrow(re_rawdf_glist[[i]])
+  ##### PA #####
+  PA_polyglist[[i]] = fa.parallel(item_poly_glist[[i]]$rho, n.obs = subject, fa = "both", n.iter = rep, 
+                                  cor = "poly", error.bars = F, SMC = T, quant = baseline/100)
+  ##### MAP #####
+  MAP_ployglist[[i]] = map(item_poly_glist[[i]]$rho, display='yes')
+  ##### EV > 1 rule #####
+  EVg[[i]] = sum(eigen(item_poly_glist[[i]]$rho, only.values = T)$values > 1)
+  ##### Fit Indices #####
+  fit_ob[[i]] = nfactors(item_poly_glist[[i]]$rho, n = 11, rotate = "oblimin", diagonal=F, fm = "minres", 
+                         n.obs=subject, cor = "poly")
+}
+```
+```{r}
+for (i in 1:2){
+ print(psych.pa(PA_polyglist[[i]], rep, baseline, 25))
+
+ cat(paste0("\nFor ", dummy[i], ":\n",
+           "Parallel analysis (PC) suggests ", as.character(PA_polyglist[[i]]$ncomp), " factor(s).\n",
+           "Parallel analysis (PF) suggests ", as.character(PA_polyglist[[i]]$nfact), " factor(s).\n",
+           "MAP (1976) suggests ", as.character(MAP_ployglist[[i]]$nfMAP), " factor(s).\n",
+           "MAP (2000) suggests ", as.character(MAP_ployglist[[i]]$nfMAP4), " factor(s).\n",
+           "EV > 1 rule suggests ", as.character(EVg[[i]]), " factor(s).\n"
+          )
+    ) 
+ 
+ print(fit_ob[[i]])
+}
+```
+
+* 平行分析(PF)建議29/21個（男/女）因素
+* 平行分析(PC)建議8/8個（男/女）因素
+* MAP (1976)建議8/7個（男/女）因素
+* MAP (2000)建議8/8個（男/女）因素
+* EV > 1建議19/18個（男/女）因素
+
+2. 樣式矩陣 (Male)
+* 1~11個因素解 (OLS + Varimax)
+```{r, fig.keep="none", results="hide", eval = FALSE}
+#rownames(item_info) = colnames(re_rawdf) # Must include the reverse item information to ensure there is no NA in dimension information
+olsfa_Va_M = list()
+for (i in factorrange){
+olsfa_Va_M[[i]] = fa(item_poly_glist[[1]]$rho, n.obs = nrow(re_rawdf_glist[[1]]), nfactors = i,
+                     rotate="varimax", residuals=T, SMC=T, max.iter = 50,
+                     fm="minres", cor="poly")
+
+}
+ols_varimax_M = loadbar(olsfa_Va_M, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_varimax_male_NEW.pdf")
+```
+
+* 1~9個因素解 (OLS + Oblimin)
+```{r, fig.keep="none", results="hide"}
+#rownames(item_info) = colnames(re_rawdf) # Must include the reverse item information to ensure there is no NA in dimension information
+olsfa_Ob_M = list()
+for (i in 1:9){
+olsfa_Ob_M[[i]] = fa(item_poly_glist[[1]]$rho, n.obs = nrow(re_rawdf_glist[[1]]), nfactors = i,
+                     rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+                     fm="minres", cor="poly")
+
+}
+ols_oblimin_M = loadbar(olsfa_Ob_M, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblimin_P_male_NEW.pdf")
+```
+
+3. 樣式矩陣 (Female)
+* 1~11個因素解 (OLS + Varimax)
+```{r, fig.keep="none", results="hide", eval = FALSE}
+#rownames(item_info) = colnames(re_rawdf) # Must include the reverse item information to ensure there is no NA in dimension information
+olsfa_Va_F = list()
+for (i in factorrange){
+olsfa_Va_F[[i]] = fa(item_poly_glist[[2]]$rho, n.obs = nrow(re_rawdf_glist[[2]]), nfactors = i,
+                     rotate="varimax", residuals=T, SMC=T, max.iter = 50,
+                     fm="minres", cor="poly")
+}
+
+ols_varimax_F = loadbar(olsfa_Va_F, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_varimax_female_NEW.pdf")
+```
+
+* 1~11個因素解 (OLS + Oblimin)
+```{r, fig.keep="none", results="hide"}
+#rownames(item_info) = colnames(re_rawdf) # Must include the reverse item information to ensure there is no NA in dimension information
+olsfa_Ob_F = list()
+for (i in factorrange){
+olsfa_Ob_F[[i]] = fa(item_poly_glist[[2]]$rho, n.obs = nrow(re_rawdf_glist[[2]]), nfactors = i,
+                     rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+                     fm="minres", cor="poly")
+
+}
+ols_oblimin_F = loadbar(olsfa_Ob_F, item_info[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblimin_P_female.pdf")
+```
+
+4. Congruence coefficient
+* A value of .90 or higher indicates similarity between corresponding factors (e.g., Reynolds & Harding, 1983; Reynolds, Lowe, & Saenz, 1999)
+* `factor.congruence(A, B)`所產生的結果中，column是B因素解，row是A因素解。
+```{r}
+con_gender = factor.congruence(olsfa_Ob_F[[7]]$loadings, olsfa_Ob_M[[7]]$loadings, digits = 4)
+con_all_F = factor.congruence(olsfa[[7]]$loadings, olsfa_Ob_F[[7]]$loadings, digits = 4)
+con_all_M = factor.congruence(olsfa[[7]]$loadings, olsfa_Ob_M[[7]]$loadings, digits = 4)
+print(con_gender); print(con_all_F); print(con_all_M)
+#write.csv(con_gender, "con_gender.csv"); write.csv(con_all_F, "con_all_F.csv"); write.csv(con_all_M, "con_all_M.csv")
+```
+
+# Factorical Structure after Deleting Some Items
+
+* Rule: Delete items with high item complexity (> 3) in 6-factor solution
+1. Visualize item complexity
+```{r, results="hide", fig.keep="none"}
+#sort(olsfa[[6]]$complexity, decreasing = T)
+
+##### Plot item complexity as scree plot
+
+plotcom = function(falist){
+  comlist = list()
+  for (i in 2:length(falist)){
+     
+     if (!require("pacman")) install.packages("pacman"); library(pacman)
+     p_load(ggplot2, dplyr)
+    
+     comdf = data.frame(item = names(falist[[i]]$complexity),
+                        complexity = falist[[i]]$complexity) %>%
+       arrange(desc(complexity))
+     
+     comdf$item = factor(comdf$item, levels = comdf$item)
+     
+     compcaption = paste0("Mean item complexity = ",
+                         as.character(round(mean(falist[[i]]$complexity), 2)),
+                         " (SD = ", as.character(round(sd(falist[[i]]$complexity), 2)), ")")
+     
+     
+     comlist[[i]] = ggplot(comdf, aes(x=item, y=complexity)) +
+        geom_bar(aes(y=complexity), stat = 'identity', colour = "white", fill = "#CCCCFF") + 
+        labs(x="Item",y = "Item complexity", title = "Plot of Item Complexity",
+             subtitle = paste0(as.character(i), " factors solution"), caption = compcaption) +
+      geom_hline(aes(yintercept = mean(complexity)), color="#e74c3c", size = 1.5, alpha = 0.5) +
+      theme_bw() +
+      theme(axis.line = element_line(colour = "black"), # Make "l" type axis
+        panel.border = element_blank(), # Make "L" type axis
+        legend.background = element_rect(fill = "transparent", size = .5, linetype = "dotted"), 
+        axis.ticks.x=element_blank(),
+        panel.grid.major.x = element_blank(), # Suppress major vertical gridlines
+        panel.grid.minor.x = element_blank(), # Suppress minor vertical gridlines
+        panel.background = element_rect(fill = "transparent", colour = NA), # Background transparent
+        plot.background = element_rect(fill = "transparent", colour = NA)) # Background transparent
+  }
+  return(comlist)
+}
+olsfa_com = plotcom(olsfa)
+```
+
+```{r, fig.width=12}
+olsfa_com[[6]]
+
+# Delete specific item cols (complexity >= 3) by `select`
+# https://stackoverflow.com/questions/25923392/select-columns-based-on-string-match-dplyrselect
+highitemcom = names(subset(olsfa[[6]]$complexity, olsfa[[6]]$complexity >= 3))
+re_rawdf_del = select(as.data.frame(re_rawdf), -one_of(highitemcom))
+item_poly_del = polychoric(re_rawdf_del, ML = F, std.err = F)
+n_var_del = ncol(re_rawdf_del)
+
+rownames(item_info) = colnames(re_rawdf)
+item_info_del = subset(item_info, !(rownames(item_info) %in% highitemcom))
+```
+
+1. Overall
+* 9因素解之後都未達收斂。
+```{r, fig.keep="none", results="hide"}
+olsfa_del = list()
+subject = nrow(re_rawdf_del)
+for (i in 1:8){
+olsfa_del[[i]] = fa(item_poly_del$rho, n.obs = subject, nfactors = i,
+                    rotate="oblimin", residuals=T, SMC=T, max.iter = 50,
+                    fm="minres", cor="poly")
+}
+faplot.list = list()
+loadbar(olsfa_del, item_info_del[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblique_P_del.pdf")
+```
+
+2. By gender
+* Male: Not converged until 12 factors.
+* Feale: Not converged until 13 factors.
+```{r, fig.keep="none", results="hide"}
+re_rawdf_glist_del = list(); item_poly_glist_del = list()
+for (i in 1:2){
+  re_rawdf_glist_del[[i]] = select(as.data.frame(re_rawdf_glist[[i]]), -one_of(highitemcom))
+  item_poly_glist_del[[i]] = polychoric(re_rawdf_glist_del[[i]], ML = F, std.err = F)
+}
+
+olsfa_Ob_M_del = list()
+for (i in 1:11){
+olsfa_Ob_M_del[[i]] = fa(item_poly_glist_del[[1]]$rho, n.obs = nrow(re_rawdf_glist_del[[1]]), nfactors = i,
+                         rotate="oblimin", residuals=T, SMC=T, max.iter = 50, fm="minres", cor="poly")
+}
+
+ols_oblimin_M_del = loadbar(olsfa_Ob_M_del, item_info_del[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblimin_male_del.pdf")
+
+olsfa_Ob_F_del = list()
+for (i in 1:12){
+olsfa_Ob_F_del[[i]] = fa(item_poly_glist_del[[2]]$rho, n.obs = nrow(re_rawdf_glist_del[[2]]), nfactors = i,
+                         rotate="oblimin", residuals=T, SMC=T, max.iter = 50, fm="minres", cor="poly")
+}
+
+ols_oblimin_F_del = loadbar(olsfa_Ob_F_del, item_info_del[,-4], type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblimin_female_del.pdf")
+```
+
+# FA of Facets
+
+## 計分、描述統計、KMO與因素數目 (Pearson cor)
+* 對facet之得分求多序列相關會出現矩陣非正定的性質。且將屬於相同facet的題目加總形成之分數會比較接近連續量尺，故以下採用Pearson相關進行後續的因素分析。
+* 各方法建議之因素數目
+      * PA: 6
+      * MAP (1976): 4
+      * MAP (2000): 4
+      * BIC: 6
+      * EV > 1: 7
+```{r, message=FALSE, warning=FALSE}
+### 各facet計分
+facet.keys.list = list(Sincerity = c(6, -30, 54), Fairness = c(-12, 36, -60),
+                       Greed_Avoidance = c(18, -42), Modesty = c(-24, -48),
+                       Fearfulness = c(5, 29, -53), Anxiety = c(11, -35),
+                       Dependence = c(17, -41), Sentimentality = c(23, 47, -59),
+                       Social_Self_Esteem = c(4, -28, -52), Social_Boldness = c(-10, 34, 58),
+                       Sociability = c(16, 40), Liveliness = c(22, -46),
+                       Forgiveness = c(3, 27), Gentleness = c(-9, 33, 51),
+                       Flexibility = c(-15, 39, -57), Patience = c(-21, 45),
+                       Organization = c(2, -26), Diligence = c(8, -32),
+                       Perfectionism = c(-14, 38, 50), Prudence = c(-20, -44, -56),
+                       Aesthetic_Appreciation = c(-1, 25), Inquisitiveness = c(7, -31),
+                       Creativity = c(13, 37, -49), Unconventionality = c(-19, 43, -55))
+facet.keys = make.keys(itemonly, facet.keys.list)
+
+facet.scored = scoreItems(keys = facet.keys, items = itemonly, totals = FALSE,
+                          missing = FALSE, min = 1, max = 5, digits = 3)
+facetscore = cbind(as.data.frame(facet.scored$scores), rawdf[, 2:10])
+colnames(facetscore)[c(3, 9, 10, 21)] = c("Greed Avoidance", "Social Self-Esteem", "Social Boldness", "Aesthetic Appreciation")
+
+# Descriptive statistics
+facet_stat = round(describe(facetscore[, 1:24]), 4)
+facet_stat$vars = rep(c("H", "E", "X", "A", "C", "O"), each = 4); colnames(facet_stat)[1] = "dimension"
+# write.csv(facet_stat[,-c(2,7:10, 13)], "facet_stat.csv")
+knitr::kable(facet_stat, caption = 'Descriptive statistics of all facets (n = 519)')
+
+### KMO & Bartlett test
+
+facet_cor = cor(facetscore[,1:24])
+facet_KMO = KMO(facet_cor)
+print(facet_KMO)
+subject = nrow(re_rawdf)
+cortest.bartlett(facet_cor, n = subject)
+```
+```{r, message=FALSE, warning=FALSE, results="hide", fig.keep="hide"}
+### Factor Number
+PA_facet = fa.parallel(facet_cor, n.obs = subject, fa = "both", n.iter = rep, 
+                       cor = "cor", error.bars = F, SMC = T, quant = baseline/100)
+```
+```{r, message=FALSE, warning=FALSE}
+psych.pa(PA_facet, rep, baseline, 24)
+MAP_facet = map(facet_cor, display='yes')
+fit_facet = nfactors(facet_cor, n = 10, rotate = "oblimin", diagonal=F, fm = "minres",
+                     n.obs=subject, cor = "cor")
+print(fit_facet)
+sum(eigen(facet_cor, only.values = T)$values > 1)
+```
+
+## Estimation of Factor Loadings (OLS + Oblimin: 1-10 factors)
+* A loading greater than abs(1) was detected when nfactor = 11.
+```{r}
+olsfa_facet = list()
+for (i in 1:10){
+olsfa_facet[[i]] = fa(facet_cor, n.obs = subject, nfactors = i,
+                      rotate = "oblimin", residuals=T, SMC=T, max.iter = 50,
+                      fm = "minres", cor = "cor")
+}
+
+### Make a data.frame called "facetinfo" for `loadbar` function
+
+facet.item = vector()
+for (i in 1:length(facet.keys.list)){
+  facet.item = append(facet.item, paste(facet.keys.list[[i]], collapse = " "))
+}
+
+
+facet_info = data.frame(maindim = rep(c("H", "E", "X", "A", "C", "O"), each = 4),
+                        item = facet.item)
+row.names(facet_info) = colnames(facetscore)[1:24]
+```
+
+* 新建一個函數來繪製子向度與大向度的關係：`loadbar.facet`
+        * HEXACO理論架構在六因素解可被重製
+        
+```{r}
+loadbar.facet = function(loading, facetinfo, type="Pattern", axis="maindim", extraction = "Unknown", filename="faplots_facet.pdf", rel_widths = c(4,1), widthpdf = 15, widthheight = 11){
+  
+  # Create the empty list first to save ggplot objects
+  faplot.list = list()
+
+  ################ Check packages by `pacman` ################
+  
+  if (!require("pacman")) install.packages("pacman"); library(pacman)
+  p_load(reshape2, ggplot2, cowplot, grid, dplyr, psych)
+  
+  loadmat = list()
+  
+  if (type == "Pattern"){
+    hlab = "Loading Strength"
+    for(i in 1:length(loading)){
+      loadmat[[i]] = fa.lookup(loading[[i]], facetinfo, digits = 4)
+    }
+  }
+  else if (type == "Structure"){
+    hlab = "Correlation (Factors, Varibles)"
+    for(i in 1:length(loading)){
+      item_cc = data.frame(rownames= row.names(loading[[i]]$Structure),
+                           h2 = loading[[i]]$communality, com = loading[[i]]$complexity)
+      loadmat[[i]] = fa.lookup(loading[[i]]$Structure, facetinfo, digits = 4)
+      loadmat[[i]] = inner_join(cbind(loadmat[[i]], rownames = row.names(loadmat[[i]])), item_cc, by = "rownames")
+      row.names(loadmat[[i]]) = loadmat[[i]]$rownames
+      loadmat[[i]] = select(loadmat[[i]], -rownames)
+      
+    }
+  }
+    
+  loadmat_l = list()
+  
+  for (i in 1:length(loadmat)){
+    
+    ################ Data transformation for further plotting ################
+    loadmat[[i]] = cbind(loadmat[[i]], facet = row.names(loadmat[[i]]))
+    
+    complexity = paste0("Mean facet complexity = ", as.character(round(mean(loadmat[[i]]$com), 2)),
+                        " (SD = ", as.character(round(sd(loadmat[[i]]$com), 2)), ")")
+    submain = paste0(extraction, " method with ", loading[[i]]$rotation, " rotation. (N = ", loading[[i]]$n.obs,")")
+    fit = paste0("RMSEA = ", as.character(round(loading[[i]]$RMSEA[1],3)),
+                 "; BIC = ", as.character(round(loading[[i]]$BIC,3)),
+                 "; TLI = ", as.character(round(loading[[i]]$TLI,3)),".")
+    
+    loadmat_l[[i]] = melt(loadmat[[i]], id = c("com","h2","maindim","item","facet"), 
+                          measure = subset(colnames(loadmat[[i]]),
+                                           colnames(loadmat[[i]])!="com"&
+                                           colnames(loadmat[[i]])!="h2"&
+                                           colnames(loadmat[[i]])!="maindim"&
+                                           colnames(loadmat[[i]])!="item"&
+                                           colnames(loadmat[[i]])!="facet"),
+                          variable.name="Factor", value.name="Loading")
+
+    # To make x-axis of ggplot follow the specific order (original pattern/structure matrix order)
+    loadmat_l[[i]]$facet = factor(loadmat_l[[i]]$facet, levels = loadmat[[i]]$facet)
+
+    if (axis == "item"){
+      align = 0
+      vlab = "Facet & Item"
+      vlabel = loadmat_l[[i]]$item
+    }
+    else if (axis == "maindim"){
+      align = 1
+      vlab = "Facet & Dimension"
+      vlabel = loadmat_l[[i]]$maindim
+    }
+    
+    loadmat_l[[i]]$Communality = factor(rep("Communality", nrow(loadmat_l[[i]])))
+
+    ################ Plot Pattern/Structure Matrix ################
+  
+    assign("PS", ggplot(loadmat_l[[i]], aes(facet, abs(Loading), fill = Loading)) + 
+      facet_wrap(~ Factor, nrow = 1) + 
+      geom_bar(stat = "identity") + 
+      coord_flip() +
+      # Define the fill color gradient: blue=positive, red=negative
+      scale_fill_gradient2(name = "Loading", 
+                           high = "blue", mid = "white", low = "red", 
+                           midpoint = 0, guide = F) +
+      #scale_x_discrete(labels = vlabel) + ################################3
+      labs(x = vlab, y = hlab, title = paste("Barplot of the", type,"Matrix"), subtitle = submain, caption = "") + 
+      theme_bw(base_size = 10) + #use a black-and white theme with set font size  
+      theme(axis.text.y=element_text(hjust=align), # Align of the `axis`
+            #legend.position=c(.85, .85),
+            #legend.background = element_rect(fill="transparent", size=.5, linetype="dotted"), 
+            #text=element_text(family="華康中黑體", size=10),
+            strip.background = element_rect(colour="transparent", fill="#CCCCFF"), # facet label color
+            panel.background = element_rect(fill = "transparent", colour = NA),
+            panel.border = element_blank(), #element_rect(colour = "#CCCCFF"),
+            plot.background = element_rect(fill = "transparent", colour = NA)) +
+      background_grid(major = 'x', minor = "none"))# +
+      #panel_border(colour = "#CCCCFF"): The same with panel.background in theme
+  
+    ################ Plot Communality ################
+    
+    assign("COM", ggplot(distinct(loadmat_l[[i]], facet, h2, Communality), aes(facet, h2, fill = h2)) +
+      geom_bar(stat = "identity") + 
+      facet_wrap(~ Communality, nrow = 1) +
+      coord_flip() +
+      scale_fill_gradient2(name = "h2", 
+                           high = "black", mid = "grey", low = "white", 
+                           midpoint = 0, guide = F) +
+      scale_x_discrete(labels = vlabel) +
+      labs(y = "Communality", title="", subtitle = complexity, caption = fit) +
+      theme_bw(base_size = 10) +
+      theme(axis.text.y=element_text(hjust=0), # Retain y axis labels for convenience
+            axis.line.y = element_line(colour = "black"), # Make "l" type axis
+            panel.border = element_blank(), # Suppress border
+            strip.background = element_rect(colour="transparent", fill="gray80"), # facet label color
+            axis.title.y=element_blank(), # Remove y axis lab for beauty
+            axis.ticks.y=element_blank(), # Remove y axis ticks for beauty
+            panel.background = element_rect(fill = "transparent", colour = NA),
+            plot.background = element_rect(fill = "transparent", colour = NA)) +
+      background_grid(major = 'x', minor = "none"))
+  
+    ################ Marge two plot  ################
+  
+    g.PS = ggplotGrob(PS); g.COM = ggplotGrob(COM)
+    PS.heights = g.PS$heights[1:3] 
+    COM.heights = g.COM$heights[1:3] # same for mpg plot
+    max.heights = unit.pmax(PS.heights, COM.heights) # calculate maximum heights
+    g.PS$heights[1:3] = max.heights # assign max heights to PS gtable
+    g.COM$heights[1:3] = max.heights # assign max heights to COM gtable
+  
+    # plot_grid() can work directly with gtables, so this works!
+    faplot.list[[i]] = plot_grid(g.PS, g.COM, ncol = 2, rel_widths = rel_widths)
+    
+  }
+  
+  ################ Create pdf where each page is a separate plot ################
+  
+  pdf(filename, width = widthpdf, height = widthheight)
+  for (i in 1:length(loadmat)) {
+    print(faplot.list[[i]])
+  }
+  dev.off()
+  
+  cat("The ggplot objects are saved into a list you assign.\n\nFor example, if you assign the `loadpar` function into a variable called `faplot`, i.e., `faplot = loadpar(...)`, then the plot of m factor solution can be called by `faplot[[m]]`.\n\nFor converience, all plots are saved into a single pdf file in the working directory.")
+  
+  return(faplot.list) # Return the ggplot object for further use
+
+}
+
+ols_oblimin_facet = loadbar.facet(olsfa_facet, facet_info, type="Pattern", axis="maindim", extraction = "OLS", filename="faplot_oblique_P_facet_dim.pdf")
+
+
+#olsfa_facet_6 = fa.lookup(olsfa_facet[[6]], facet_info, digits = 4)
+#write.csv(olsfa_facet_6, "ols6_oblique_P_facet.csv") 
+#write.csv(olsfa_facet[[6]]$Phi, "ols6_oblique_Phi_facet.csv")
+```
