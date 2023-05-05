@@ -6,7 +6,6 @@ output:
     theme: paper
     toc: yes
     toc_float: yes
-  date: "2017/05/03"
   author: "Ray Ding"
   html_notebook: default
   word_document: default
