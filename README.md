@@ -1,5 +1,5 @@
 # Projects & Portfolios
-This repository consists of some materials (R code, papers, slides) for several projects I worked on. Note that it's for illustration purpose so the complete code and data are not uploaded here.
+This repository consists of some materials (R code, papers, slides) for several projects I worked on. Note that it's for illustration purpose so the complete code and data are not available here.
 
 1. Online visualization for Taiwan Facebook data [[slide](https://github.com/qwding101/Projects-Portfolios/blob/main/01%20FBIssueAnalysis/2016FBissueAnalysis.pdf), [Shiny website](https://rayrdemo.shinyapps.io/DSRshiny_upload/)]
 2. Using Bayesian logistic multilevel model to examine the relationship between personal belief and risk-taking [[slide](https://github.com/qwding101/Projects-Portfolios/blob/main/02%20BayesianLogistic/ValueAndRisktaking.pdf), [code](https://github.com/qwding101/Projects-Portfolios/blob/main/02%20BayesianLogistic/BayesianLogistic.R)]
