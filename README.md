@@ -1,5 +1,5 @@
 # Projects & Portfolios
-This repository contains some materials (code, papers, slides) for several projects I worked on. Note that it's for illustration purpose so the complete code and data are not available here.
+This repository contains some materials (code, papers, slides) for several projects I worked on. Note that it's for illustration purpose so the complete code and data are not publicly available.
 
 1. Spectral analysis of spatial point processes. Because current manuscript is under preparation, the slide for this project is not publicly available. For those who are interested in our methodology, please refer to [our previous paper](https://arxiv.org/pdf/2401.06403).
 2. Online visualization for Taiwan Facebook data [[slide](https://github.com/qwding101/Portfolios/blob/main/02_FBIssueAnalysis/2016FBissueAnalysis.pdf), [Shiny website](https://rayrdemo.shinyapps.io/DSRshiny_upload/)]
