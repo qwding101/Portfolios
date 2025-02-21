@@ -1,8 +1,7 @@
 # Projects & Portfolios
 This repository contains some materials (code, papers, slides) for several projects I worked on. Note that it's for illustration purpose so the complete code and data are not publicly available.
 
-**1. Spectral analysis of multivariate inhomogeneous spatial point processes [[R package](https://qwding101.github.io/SpecPP), [paper](https://arxiv.org/abs/2502.09948)]**
-
+1. **Spectral analysis of multivariate inhomogeneous spatial point processes [[R package](https://qwding101.github.io/SpecPP), [paper](https://arxiv.org/abs/2502.09948)]**
 2. Online visualization for Taiwan Facebook data [[slide](https://github.com/qwding101/Portfolios/blob/main/02_FBIssueAnalysis/2016FBissueAnalysis.pdf), [Shiny website](https://rayrdemo.shinyapps.io/DSRshiny_upload/)]
 3. Effect size reporting practices in Taiwanese psychology and education journals [[slide](https://github.com/qwding101/Portfolios/blob/main/03_EffectSize/EffectSizeReview_slide.pdf), [paper](https://github.com/qwding101/Portfolios/blob/main/03_EffectSize/ESreview_paper.pdf), [supplemental materials](https://osf.io/n69xs/)]
 4. Using Bayesian logistic regression to examine the relationship between personal belief and risk-taking [[slide](https://github.com/qwding101/Portfolios/blob/main/04_BayesianLogistic/ValueAndRisktaking.pdf), [code](https://github.com/qwding101/Portfolios/blob/main/04_BayesianLogistic/BayesianLogistic.R)]
